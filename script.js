@@ -59,7 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-capture').addEventListener('click', async () => {
         if (state.count >= state.max) return;
         const cd = document.getElementById('countdown'); cd.classList.remove('hidden');
-        for(let i=3; i>0; i--) { cd.innerText = i; await wait(1000); }
+        for(let i=2; i>0; i--) { cd.innerText = i; await wait(1000); }
         cd.classList.add('hidden');
         
         const ctx = els.canvasCapture.getContext('2d'); 

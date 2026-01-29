@@ -9,35 +9,43 @@
 </head>
 <body>
 
-    <div id="scene-landing" class="scene active final-landing-scene">
+    <<div id="scene-landing" class="scene active final-landing-scene">
+    <div style="display: flex; flex-direction: column; gap: 20px; align-items: center;">
         <button id="btn-start" class="floor-shutter-btn">
             <div class="btn-ring">
                 <i class="fas fa-camera"></i>
                 <span>BAŞLAT</span>
             </div>
         </button>
+        
+        <button id="btn-gallery-trigger" class="flip-btn-small" style="background: white; padding: 12px 25px;">
+            <i class="fas fa-images"></i> Galeriden Fotoğraf Seç
+        </button>
+        <input type="file" id="gallery-input" multiple accept="image/*" style="display: none;">
     </div>
+</div>
 
     <div id="scene-camera" class="scene hidden">
         
         <div class="camera-container">
             <div id="camera-frame">
                 <video id="video-feed" autoplay playsinline muted></video>
-                
                 <img id="camera-overlay-img" src="" class="overlay-layer" style="display:none;">
-
                 <canvas id="capture-canvas" style="display:none;"></canvas>
                 <div id="countdown" class="hidden">3</div>
             </div>
         </div>
 
+        <div class="camera-controls" style="margin-bottom: 10px;">
+            <button id="btn-mirror" class="option-btn" style="background: rgba(255,255,255,0.8); border-radius: 20px; padding: 10px 20px;">
+                <i class="fas fa-arrows-alt-h"></i> Görüntüyü Çevir
+            </button>
+        </div>
+
         <div class="filters-scroll">
             <button onclick="applyEffect('none', 'none')">Normal</button>
-            
             <button onclick="applyEffect('grayscale(1) contrast(1.2)', 'none')">B&W</button>
-
             <button onclick="applyEffect('contrast(2.5) sepia(1.5) brightness(1) saturate(1)', 'none')">Belly</button>
-
             <button onclick="applyEffect('saturate(1.4) contrast(1.1)', 'overlay-light.png')">Parlak Işık</button>
             <button onclick="applyEffect('contrast(1.1)', 'overlay-noise.png')">Grenli</button>
         </div>
@@ -49,10 +57,8 @@
     </div>
 
     <div id="scene-editor" class="scene hidden editor-scene-layout">
-        
         <div class="editor-top-area">
             <h2 class="editor-title">FOTOĞRAFIN HAZIR!</h2>
-            
             <div class="flip-wrapper-container">
                 <div class="flip-wrapper" id="flip-wrapper">
                     <div class="flip-inner">
@@ -65,14 +71,12 @@
                     </div>
                 </div>
             </div>
-            
             <button class="flip-btn-small" onclick="rotateCard()">
                 Arkasına Bak <i class="fas fa-sync-alt"></i>
             </button>
         </div>
 
         <div class="editor-bottom-panel">
-            
             <div class="glass-tabs">
                 <button class="glass-tab active" onclick="switchTab('tab-layout', this)"><i class="fas fa-th-large"></i> Düzen</button>
                 <button class="glass-tab" onclick="switchTab('tab-frame', this)"><i class="fas fa-paint-brush"></i> Çerçeve</button>
@@ -80,23 +84,17 @@
             </div>
 
             <div class="glass-content-area">
-                
                 <div id="tab-layout" class="tab-content active horizontal-scroll">
-                    
                     <button class="option-btn" onclick="setLayout('v-strip-34')"><i class="fas fa-grip-lines-vertical"></i> Dikey Şerit (3:4)</button>
                     <button class="option-btn" onclick="setLayout('v-strip-43')"><i class="fas fa-grip-lines-vertical"></i> Dikey Şerit (4:3)</button>
                     <button class="option-btn" onclick="setLayout('h-strip-43')"><i class="fas fa-grip-lines"></i> Yatay Şerit (4:3)</button>
                     <button class="option-btn" onclick="setLayout('h-strip-34')"><i class="fas fa-grip-lines"></i> Yatay Şerit (3:4)</button>
-
                     <div class="divider-vertical"></div>
-
                     <button class="option-btn" onclick="setLayout('grid')"><i class="fas fa-th-large"></i> Grid (2x2)</button>
                     <button class="option-btn" onclick="setLayout('single')"><i class="far fa-image"></i> Tekli</button>
                     <button class="option-btn" onclick="setLayout('top-big')"><i class="fas fa-window-maximize"></i> Üst Geniş</button>
                     <button class="option-btn" onclick="setLayout('side-big')"><i class="fas fa-columns"></i> Yan Geniş</button>
-                    
                     <div class="divider-vertical"></div>
-                    
                     <button class="option-btn" onclick="setShape('rect')" title="Kare"><i class="far fa-square"></i></button>
                     <button class="option-btn" onclick="setShape('rounded')" title="Oval"><i class="far fa-square" style="border-radius:8px"></i></button>
                 </div>
@@ -107,9 +105,7 @@
                     <div class="color-dot" style="background:#e74c3c" onclick="setPattern('none', '#e74c3c')"></div>
                     <div class="color-dot" style="background:#f1c40f" onclick="setPattern('none', '#f1c40f')"></div>
                     <div class="color-dot" style="background:#3498db" onclick="setPattern('none', '#3498db')"></div>
-                    
                     <div class="divider-vertical"></div>
-                    
                     <img src="p1.jpg" onerror="this.src='indir (41).jpg'" onclick="setPattern(this.src)" class="pattern-thumb">
                     <img src="p2.jpg" onerror="this.src='İznik çinisi.jpg'" onclick="setPattern(this.src)" class="pattern-thumb">
                     <img src="p3.jpg" onerror="this.src='indir (40).jpg'" onclick="setPattern(this.src)" class="pattern-thumb">
@@ -130,14 +126,12 @@
                                 <div class="color-dot small" style="background:#ffffff" onclick="setNoteColor('#ffffff')" title="Beyaz"></div>
                                 <div class="color-dot small" style="background:#4a2c20" onclick="setNoteColor('#4a2c20')" title="Kahverengi"></div>
                             </div>
-
                             <div class="style-buttons">
                                 <button onclick="toggleNoteBold()" class="style-btn" title="Kalın"><i class="fas fa-bold"></i></button>
                                 <button onclick="changeNoteSize(-0.2)" class="style-btn" title="Küçült"><i class="fas fa-minus"></i></button>
                                 <button onclick="changeNoteSize(0.2)" class="style-btn" title="Büyüt"><i class="fas fa-plus"></i></button>
                             </div>
                         </div>
-                        
                         <div class="note-fonts">
                             <button onclick="setNoteFont('Lora')" style="font-family: 'Lora';">Lora</button>
                             <button onclick="setNoteFont('Lora Italic')" style="font-family: 'Lora Italic';">Italic</button>

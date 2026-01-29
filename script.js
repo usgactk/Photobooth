@@ -4,7 +4,8 @@ const state = {
     shape: 'rect', color: '#ffffff', pattern: 'none', 
     note: '', noteColor: '#000000', noteFont: 'Lora', 
     noteScale: 1.0, noteBold: false,
-    ratio: 'portrait' 
+    ratio: 'portrait',
+    mirrored: true // Varsayılan aynalı mod
 };
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -14,66 +15,113 @@ document.addEventListener('DOMContentLoaded', () => {
         frame: document.getElementById('camera-frame'), counter: document.getElementById('photo-counter'), flipWrapper: document.getElementById('flip-wrapper'), noteArea: document.getElementById('note-area-small'),
         overlayEl: document.getElementById('camera-overlay-img')
     };
+// DOMContentLoaded içine ekle
+const galleryInput = document.getElementById('gallery-input');
+const galleryBtn = document.getElementById('btn-gallery-trigger');
+
+galleryBtn.addEventListener('click', () => galleryInput.click());
+
+galleryInput.addEventListener('change', async (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+
+    // Fotoğrafları temizle ve yeni seçilenleri ekle (Max 4 adet)
+    state.photos = [];
+    const limit = Math.min(files.length, state.max);
+    
+    for (let i = 0; i < limit; i++) {
+        const base64 = await fileToDataURL(files[i]);
+        state.photos.push(base64);
+    }
+    
+    state.count = state.photos.length;
+
+    // Kamera sahnesini atla, doğrudan editöre git
+    els.landing.classList.add('hidden');
+    els.editor.classList.remove('hidden');
+    
+    renderFront();
+    renderBack();
+});
+
+// Yardımcı fonksiyon: Dosyayı Base64 formatına çevirir
+function fileToDataURL(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
 
     // BAŞLAT
     const startBtn = document.getElementById('btn-start');
     if(startBtn) {
         startBtn.addEventListener('click', async () => {
             els.landing.classList.add('hidden'); els.camera.classList.remove('hidden'); setAspectRatio('portrait');
-            try { const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false }); els.video.srcObject = stream; state.stream = stream; } 
+            try { 
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false }); 
+                els.video.srcObject = stream; 
+                state.stream = stream; 
+                // İlk açılışta aynalamayı uygula
+                els.video.style.transform = "scaleX(-1)";
+            } 
             catch (err) { alert("Kamera Hatası!"); location.reload(); }
         });
     }
 
-    // KAMERA
+    // YENİ: Aynalama Değiştirme Butonu
+    const mirrorBtn = document.getElementById('btn-mirror');
+    if(mirrorBtn) {
+        mirrorBtn.addEventListener('click', () => {
+            state.mirrored = !state.mirrored;
+            els.video.style.transform = state.mirrored ? "scaleX(-1)" : "scaleX(1)";
+        });
+    }
+
+    // KAMERA AYARLARI
     window.setAspectRatio = (mode) => {
         state.ratio = mode; 
         if(mode === 'portrait') { els.frame.style.aspectRatio="3/4"; els.flipWrapper.style.aspectRatio="3/4"; } 
         else { els.frame.style.aspectRatio="4/3"; els.flipWrapper.style.aspectRatio="4/3"; }
     };
 
-    // --- FİLTRE MOTORU (SABİT GÜZELLİK MODU + OVERLAY) ---
     window.applyEffect = (cssFilter, overlaySrc) => {
-        // SABİT GÜZELLİK AYARI (Blur: gözenek)
         const beautyBase = "blur(0.5px)";
-
-        // Filtre birleştirme
         let finalFilter = (cssFilter === 'none') ? beautyBase : (beautyBase + cssFilter);
-
         state.filter = finalFilter;
         state.overlayImg = overlaySrc;
-        
-        // Videoya uygula
         els.video.style.filter = finalFilter;
-        
-        // Overlay işlemleri
         if (overlaySrc && overlaySrc !== 'none') {
             els.overlayEl.src = overlaySrc;
             els.overlayEl.style.display = 'block';
         } else {
             els.overlayEl.style.display = 'none';
-            els.overlayEl.src = '';
         }
     };
 
     document.getElementById('btn-capture').addEventListener('click', async () => {
         if (state.count >= state.max) return;
         const cd = document.getElementById('countdown'); cd.classList.remove('hidden');
-        for(let i=2; i>0; i--) { cd.innerText = i; await wait(1000); }
+        for(let i=3; i>0; i--) { cd.innerText = i; await wait(1000); }
         cd.classList.add('hidden');
         
         const ctx = els.canvasCapture.getContext('2d'); 
-        els.canvasCapture.width = els.video.videoWidth; els.canvasCapture.height = els.video.videoHeight;
+        els.canvasCapture.width = els.video.videoWidth; 
+        els.canvasCapture.height = els.video.videoHeight;
         
-        // 1. Videoyu (filtreli) çiz
-        ctx.translate(els.canvasCapture.width, 0); ctx.scale(-1, 1); 
+        // 1. Videoyu Çiz (Aynalama durumuna göre)
+        ctx.save();
+        if (state.mirrored) {
+            ctx.translate(els.canvasCapture.width, 0); 
+            ctx.scale(-1, 1); 
+        }
         ctx.filter = state.filter; 
         ctx.drawImage(els.video, 0, 0);
-        ctx.filter = 'none'; 
+        ctx.restore();
 
-        // 2. Overlay
+        // 2. Overlay (Aynasız, düz basılır)
         if (state.overlayImg && state.overlayImg !== 'none') {
-            ctx.scale(-1, 1); ctx.translate(-els.canvasCapture.width, 0);
             try {
                 const overlayImage = await loadImage(state.overlayImg);
                 ctx.globalCompositeOperation = 'screen'; 
@@ -82,15 +130,19 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (e) { console.error("Overlay hatası", e); }
         }
 
-        state.photos.push(els.canvasCapture.toDataURL()); state.count++; els.counter.innerText = state.count;
+        state.photos.push(els.canvasCapture.toDataURL()); 
+        state.count++; 
+        els.counter.innerText = state.count;
+
         if(state.count === state.max) {
             if(state.stream) state.stream.getTracks().forEach(t => t.stop());
-            els.camera.classList.add('hidden'); els.editor.classList.remove('hidden');
-            switchTab('tab-layout', document.querySelector('.glass-tab.active'));
+            els.camera.classList.add('hidden'); 
+            els.editor.classList.remove('hidden');
             renderFront(); renderBack();
         }
     });
 
+    // ... (Geri kalan editor, render ve yardımcı fonksiyonlar aynı kalıyor)
     window.switchTab = (tabId, clickedBtn) => {
         document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
         document.querySelectorAll('.glass-tab').forEach(btn => btn.classList.remove('active'));
@@ -98,11 +150,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if(clickedBtn) clickedBtn.classList.add('active');
         if(tabId === 'tab-note') rotateCard(true); else rotateCard(false);
     };
-
-    const btnFront = document.getElementById('btn-download-front');
-    if(btnFront) { btnFront.addEventListener('click', () => { rotateCard(false); setTimeout(() => { downloadFront(); }, 300); }); }
-    const btnBack = document.getElementById('btn-download-back');
-    if(btnBack) { btnBack.addEventListener('click', () => { rotateCard(true); setTimeout(() => { downloadBack(); }, 300); }); }
 
     window.rotateCard = (forceBack) => {
         els.flipWrapper.classList.remove('flipped', 'flipped-rotate');
@@ -116,7 +163,6 @@ document.addEventListener('DOMContentLoaded', () => {
     window.setLayout = (l) => { state.layout = l; renderFront(); renderBack(); };
     window.setShape = (s) => { state.shape = s; renderFront(); };
     window.setPattern = (p, color = null) => { state.pattern = p; if(color) state.color = color; renderFront(); renderBack(); };
-    
     window.updateNote = (v) => { state.note = v; renderBack(); };
     window.setNoteColor = (c) => { state.noteColor = c; renderBack(); els.noteArea.style.color = c; };
     window.setNoteFont = (f) => { state.noteFont = f; renderBack(); els.noteArea.style.fontFamily = f; };
@@ -142,17 +188,15 @@ document.addEventListener('DOMContentLoaded', () => {
             'top-big': [{x:50,y:50,w:800,h:500}, {x:50,y:570,w:250,h:300}, {x:325,y:570,w:250,h:300}, {x:600,y:570,w:250,h:300}],
             'side-big': [{x:50,y:50,w:500,h:1100}, {x:570,y:50,w:280,h:350}, {x:570,y:425,w:280,h:350}, {x:570,y:800,w:280,h:350}]
         };
-        const layoutKey = layouts[state.layout] ? state.layout : 'v-strip-34';
-        const currentLayout = layouts[layoutKey];
+        const currentLayout = layouts[state.layout];
         const imgs = await Promise.all(state.photos.map(src => loadImage(src)));
-        const loopCount = (state.layout === 'single') ? 1 : imgs.length;
-        for(let i=0; i<loopCount; i++) {
+        for(let i=0; i< (state.layout === 'single' ? 1 : imgs.length); i++) {
             if (!currentLayout[i]) continue;
             const pos = currentLayout[i];
             const img = imgs[i];
             ctx.save(); ctx.beginPath();
             if(state.shape==='rect') ctx.rect(pos.x,pos.y,pos.w,pos.h);
-            else if(state.shape==='rounded') roundRect(ctx,pos.x,pos.y,pos.w,pos.h,30);
+            else roundRect(ctx,pos.x,pos.y,pos.w,pos.h,30);
             ctx.clip();
             const sR = img.width/img.height, dR = pos.w/pos.h;
             let sW, sH, sX, sY;
@@ -174,8 +218,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.fillStyle = state.noteColor;
             const baseFontSize = Math.min(W, H) * 0.05; 
             const finalFontSize = baseFontSize * state.noteScale; 
-            const fontWeight = state.noteBold ? 'bold ' : '';
-            ctx.font = `${fontWeight}${finalFontSize}px '${state.noteFont}'`; 
+            ctx.font = `${state.noteBold ? 'bold ' : ''}${finalFontSize}px '${state.noteFont}'`; 
             ctx.textAlign = "center"; ctx.textBaseline = "middle";
             if(state.layout.includes('v-strip') || state.layout === 'side-big' || state.layout === 'h-strip-43') {
                 ctx.translate(W/2, H/2); ctx.rotate(-Math.PI/2); ctx.translate(-W/2, -H/2);
@@ -199,5 +242,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function triggerDownload(cvs, suffix) { const a = document.createElement('a'); a.download = `PhotoBooth_${suffix}_${Date.now()}.png`; a.href = cvs.toDataURL(); a.click(); }
     function roundRect(ctx,x,y,w,h,r) { ctx.beginPath(); ctx.roundRect(x,y,w,h,r); }
     function wrapText(ctx, text, x, y, maxWidth, lineHeight) { const words = text.split(' '); let line = ''; for(let n = 0; n < words.length; n++) { const testLine = line + words[n] + ' '; if (ctx.measureText(testLine).width > maxWidth && n > 0) { ctx.fillText(line, x, y); line = words[n] + ' '; y += lineHeight; } else { line = testLine; } } ctx.fillText(line, x, y); }
+
+    // İndirme butonlarını bağla
+    document.getElementById('btn-download-front').addEventListener('click', downloadFront);
+    document.getElementById('btn-download-back').addEventListener('click', downloadBack);
 });
 

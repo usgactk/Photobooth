@@ -141,4 +141,3 @@ canvas { max-width: 100%; max-height: 100%; object-fit: contain; }
 .back-btn { background: #34495e; }
 .action-btn:hover { transform: translateY(-2px); filter: brightness(1.1); box-shadow: 0 6px 15px rgba(0,0,0,0.2); }
 .action-btn:active { transform: scale(0.98); }
-

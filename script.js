@@ -16,33 +16,34 @@ document.addEventListener('DOMContentLoaded', () => {
         overlayEl: document.getElementById('camera-overlay-img')
     };
 // DOMContentLoaded içine ekle
-const galleryInput = document.getElementById('gallery-input');
-const galleryBtn = document.getElementById('btn-gallery-trigger');
-
-galleryBtn.addEventListener('click', () => galleryInput.click());
-
 galleryInput.addEventListener('change', async (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
 
-    // Fotoğrafları temizle ve yeni seçilenleri ekle (Max 4 adet)
-    state.photos = [];
-    const limit = Math.min(files.length, state.max);
-    
-    for (let i = 0; i < limit; i++) {
-        const base64 = await fileToDataURL(files[i]);
-        state.photos.push(base64);
+    // Mevcut fotoğraflara ekleme yap (4'ü geçme)
+    for (let i = 0; i < files.length; i++) {
+        if (state.photos.length < state.max) {
+            const base64 = await fileToDataURL(files[i]);
+            state.photos.push(base64);
+        }
     }
     
     state.count = state.photos.length;
 
-    // Kamera sahnesini atla, doğrudan editöre git
-    els.landing.classList.add('hidden');
-    els.editor.classList.remove('hidden');
-    
-    renderFront();
-    renderBack();
+    // Eğer henüz 4 fotoğraf olmadıysa kullanıcıya bilgi ver veya tekrar seçtir
+    if (state.count < state.max) {
+        alert(`Şu an ${state.count} fotoğraf seçildi. Lütfen ${state.max - state.count} tane daha seçin.`);
+        // Inputu temizle ki aynı dosyayı tekrar seçebilsin
+        galleryInput.value = ""; 
+    } else {
+        // 4 tamamlandığında editöre geç
+        els.landing.classList.add('hidden');
+        els.editor.classList.remove('hidden');
+        renderFront();
+        renderBack();
+    }
 });
+
 
 // Yardımcı fonksiyon: Dosyayı Base64 formatına çevirir
 function fileToDataURL(file) {
